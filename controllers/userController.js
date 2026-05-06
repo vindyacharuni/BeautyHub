@@ -7,7 +7,7 @@ export function createUser(req, res) {
         return res.status(403).json({
             message: "Please login to create a user"
         })
-        return
+        return  
 
     }
     if(req.user.role!="admin"){
