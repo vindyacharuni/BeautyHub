@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import bodyParser from 'body-parser'; 
 import userRouter from './Routers/userRouter.js';
 import jwt from 'jsonwebtoken';
+import productRouter from './Routers/productRouter.js';
 
 const app = express();
 
@@ -43,7 +44,8 @@ mongoose.connect(connectionString).then
 });
 
 
-app.use('/users',userRouter)
+app.use('api/users',userRouter)
+app.use('api/products',productRouter)
 
 app.listen(5000, () => {
     console.log("Server is running on port 5000");

@@ -41,6 +41,16 @@ user.save().then(()=>{
         }
     )
 })}
+export function isAdmin(req){
+    if(req.user==null){
+        return false
+    }
+    if(req.user.role=="admin"){
+        return true
+    }else{
+        return false
+    }
+}
 
 export function loginUser(req,res){
     const email=req.body.email;

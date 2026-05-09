@@ -2,42 +2,48 @@ import mongoose from "mongoose";
 const productSchema=new mongoose.Schema(
     {
         productId:{
-            Type:String,
+            type:String,
             required:true,
             unique:true
         },
         name:{
-            Type:String,
+            type:String,
             required:true
         },
         altNames:{ 
-            Type:[String],
+            type:[String],
             default:[]
         },
         labelledPrice:{
-            Type:Number,
+            type:Number,
             required:true
         },
         price:{
-            Type:Number,
+            type:Number,
             required:true
         },
         images:{
-            Type:[String],
+            type:[String],
             default:["/default-product.jpg"]
         },
         description:{
-            Type:String,
+            type:String,
             required:true
+        },
+        
+        stock:{
+            type:Number,
+            required:true
+        }, 
+        isAvailable:{
+            type:Boolean,
+            default:true
         },
         category:{
-            Type:String,
-            required:true
-        },
-        stock:{
-            Type:Number,
-            required:true
-        },                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+            type:String,
+            required:true,
+            default:"cosmetics"
+        }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
 
 
     })
