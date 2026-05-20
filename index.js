@@ -4,6 +4,9 @@ import bodyParser from 'body-parser';
 import userRouter from './Routers/userRouter.js';
 import jwt from 'jsonwebtoken';
 import productRouter from './Routers/productRouter.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 
@@ -35,7 +38,7 @@ app.use((req, res, next) => {
 )
 
 
-const connectionString="mongodb://admin:1234@ac-btmly6v-shard-00-00.h2t2pay.mongodb.net:27017,ac-btmly6v-shard-00-01.h2t2pay.mongodb.net:27017,ac-btmly6v-shard-00-02.h2t2pay.mongodb.net:27017/?ssl=true&replicaSet=atlas-14d1co-shard-0&authSource=admin&appName=Cluster0"
+const connectionString=process.env.MONGO_URL;
 mongoose.connect(connectionString).then
 (()=>{
     console.log("Connected to MongoDB");

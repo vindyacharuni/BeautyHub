@@ -76,7 +76,7 @@ export function loginUser(req,res){
                         isemailVerified:user.isemailVerified,
                        image:user.profilePicture
                     },
-                    "cbc-6503"
+                   process.env.JWT_SECRET
                 )
                     res.json({
                         token:token,
