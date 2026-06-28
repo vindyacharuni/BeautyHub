@@ -2,13 +2,16 @@ import express from 'express';
 import mongoose from 'mongoose';   
 import bodyParser from 'body-parser'; 
 import userRouter from './Routers/userRouter.js';
+import orderRouter from './Routers/orderRouter.js';
 import jwt from 'jsonwebtoken';
 import productRouter from './Routers/productRouter.js';
 import dotenv from 'dotenv';
+import cors from 'cors';
 
 dotenv.config();
 
 const app = express();
+app.use(cors());
 
 app.use(bodyParser.json());
 
@@ -18,7 +21,7 @@ app.use((req, res, next) => {
     console.log(value)
     if(value!=null){
     const token = value.replace("Bearer ", "");
-    jwt.verify(token, "cbc-6503", (err, decoded) => {
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
         console.log(decoded)
         if (decoded == null) {
             res.status(403).json({
@@ -47,8 +50,9 @@ mongoose.connect(connectionString).then
 });
 
 
-app.use('api/users',userRouter)
-app.use('api/products',productRouter)
+app.use('/api/users',userRouter)
+app.use('/api/products',productRouter)
+app.use('/api/orders',orderRouter)
 
 app.listen(5000, () => {
     console.log("Server is running on port 5000");

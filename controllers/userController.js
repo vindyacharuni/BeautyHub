@@ -1,6 +1,8 @@
 import User from "../models/user.js";
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import Order from "../models/order.js";
+import Product from "../models/product.js";
 
 export function createUser(req, res) {
     if(req.user==null){
@@ -92,3 +94,89 @@ export function loginUser(req,res){
 
         })
     }
+
+export function registerUser(req, res) {
+    const { firstName, lastName, email, password, phone } = req.body || {};
+    
+    if (!firstName || !lastName || !email || !password) {
+        return res.status(400).json({
+            message: "First name, last name, email, and password are required"
+        });
+    }
+
+    User.findOne({ email: email }).then((existingUser) => {
+        if (existingUser) {
+            return res.status(409).json({
+                message: "Email is already registered"
+            });
+        }
+
+        const passwordHash = bcrypt.hashSync(password, 10);
+        const userData = {
+            firstName,
+            lastName,
+            email,
+            password: passwordHash,
+            phone: phone || "Not provided"
+        };
+
+        const user = new User(userData);
+        
+        user.save().then(() => {
+            res.status(201).json({
+                message: "Registration successful"
+            });
+        }).catch((error) => {
+            res.status(500).json({
+                message: "Error registering user"
+            });
+        });
+    }).catch((error) => {
+        res.status(500).json({
+            message: "Database error occurred"
+        });
+    });
+}
+
+export async function getDashboardStats(req, res) {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ message: "Please login to view dashboard statistics" });
+        }
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ message: "Only admin can view dashboard statistics" });
+        }
+
+        // Calculate Total Revenue
+        const orders = await Order.find();
+        const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+
+        // Count Products
+        const totalProducts = await Product.countDocuments();
+
+        // Count Categories
+        const categories = await Product.distinct("category");
+        const totalCategories = categories.length;
+
+        // Count Low Stock (under 15 units)
+        const lowStockCount = await Product.countDocuments({ stock: { $lt: 15 } });
+
+        // Count Users (role === 'user')
+        const totalUsers = await User.countDocuments({ role: "user" });
+
+        // Retrieve last 5 orders for activity logs
+        const recentOrders = await Order.find().sort({ date: -1 }).limit(5);
+
+        res.json({
+            totalRevenue,
+            totalProducts,
+            totalCategories,
+            lowStockCount,
+            totalUsers,
+            recentOrders
+        });
+    } catch (error) {
+        console.error("Error fetching dashboard statistics:", error);
+        res.status(500).json({ message: "Error fetching dashboard statistics", error: error.message });
+    }
+}

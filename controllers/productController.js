@@ -93,7 +93,8 @@ export async function updateProduct(req,res){
             {
                 productId:productId
             },
-            data
+            data,
+            { upsert: true }
         ); 
         res.json({
             message:"Product updated successfully"
