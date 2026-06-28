@@ -180,3 +180,61 @@ export async function getDashboardStats(req, res) {
         res.status(500).json({ message: "Error fetching dashboard statistics", error: error.message });
     }
 }
+
+export async function googleLogin(req, res) {
+    const { token } = req.body || {};
+    if (!token) {
+        return res.status(400).json({ message: "Google token is required" });
+    }
+
+    try {
+        const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
+        if (!response.ok) {
+            return res.status(400).json({ message: "Invalid Google token" });
+        }
+
+        const payload = await response.json();
+        const { email, given_name, family_name, picture } = payload;
+
+        if (!email) {
+            return res.status(400).json({ message: "Email not provided by Google account" });
+        }
+
+        let user = await User.findOne({ email });
+        if (!user) {
+            const randomPassword = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+            const passwordHash = bcrypt.hashSync(randomPassword, 10);
+            
+            user = new User({
+                firstName: given_name || "Google",
+                lastName: family_name || "User",
+                email: email,
+                password: passwordHash,
+                profilePicture: picture || undefined,
+                isemailVerified: true
+            });
+            await user.save();
+        }
+
+        const backendToken = jwt.sign(
+            {
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                isBlocked: user.isBlocked,
+                isemailVerified: user.isemailVerified,
+                image: user.profilePicture
+            },
+            process.env.JWT_SECRET
+        );
+
+        res.json({
+            token: backendToken,
+            message: "Google login successful"
+        });
+    } catch (error) {
+        console.error("Error during Google login:", error);
+        res.status(500).json({ message: "Error during Google login", error: error.message });
+    }
+}

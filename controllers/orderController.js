@@ -22,27 +22,52 @@ export async function createOrder(req, res) {
         }
 
         const items = [];
-        for (const it of itemsInput) {
-            const { productId, quantity } = it;
-            // Validate only productId and quantity as requested
-            if (!productId || typeof quantity !== "number") {
-                return res.status(400).json({ message: "Invalid item format: productId and quantity required", item: it });
-            }
-            if (quantity <= 0) {
-                return res.status(400).json({ message: "Item quantity must be at least 1", item: it });
-            }
+        const updatedProducts = [];
 
-            // Enrich item with product details from Product collection
-            const product = await Product.findOne({ productId: productId });
-            if (!product) {
-                return res.status(400).json({ message: `Product not found: ${productId}`, item: it });
+        try {
+            for (const it of itemsInput) {
+                const { productId, quantity } = it;
+                if (!productId || typeof quantity !== "number") {
+                    throw new Error(`Invalid item format: productId and quantity required`);
+                }
+                if (quantity <= 0) {
+                    throw new Error(`Item quantity must be at least 1`);
+                }
+
+                // Perform atomic update: decrement stock only if stock is sufficient (>= quantity)
+                const product = await Product.findOneAndUpdate(
+                    { productId: productId, stock: { $gte: quantity } },
+                    { $inc: { stock: -quantity } },
+                    { new: true }
+                );
+
+                if (!product) {
+                    const exists = await Product.findOne({ productId: productId });
+                    if (!exists) {
+                        throw new Error(`Product not found: ${productId}`);
+                    } else {
+                        throw new Error(`Insufficient stock for product: ${exists.name || productId}. Available: ${exists.stock}`);
+                    }
+                }
+
+                // Track successfully updated products for potential rollback
+                updatedProducts.push({ productId, quantity });
+
+                const name = product.name || "";
+                const price = typeof product.price === 'number' ? product.price : 0;
+                const image = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "";
+
+                items.push({ productId, quantity, name, price, image });
             }
-
-            const name = product.name || "";
-            const price = typeof product.price === 'number' ? product.price : 0;
-            const image = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "";
-
-            items.push({ productId, quantity, name, price, image });
+        } catch (err) {
+            // Rollback inventory changes for already processed items if checking/updating fails
+            for (const rolledBack of updatedProducts) {
+                await Product.updateOne(
+                    { productId: rolledBack.productId },
+                    { $inc: { stock: rolledBack.quantity } }
+                );
+            }
+            return res.status(400).json({ message: err.message });
         }
 
         const total = items.reduce((sum, it) => sum + it.quantity * (typeof it.price === 'number' ? it.price : 0), 0);
